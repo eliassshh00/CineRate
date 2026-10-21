@@ -29,7 +29,8 @@ class UtilsTest {
     void testFormatMovieRatingSuccess() {
         printMethodName();
         assertEquals("not rated yet", Utils.formatMovieRating(Movie.noRating));
-        assertTrue(Utils.formatMovieRating(4.5).endsWith("/ " + Movie.maxRating));
-        System.out.println(Utils.formatMovieRating(4.5));
+        assertTrue(Utils.formatMovieRating(8.7).endsWith(" / 10"));
+        assertTrue(Utils.formatMovieRating(Movie.maxRating).endsWith(" / 10"));
+        System.out.println(Utils.formatMovieRating(8.7));
     }
 }

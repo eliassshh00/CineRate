@@ -5,8 +5,8 @@ import java.util.stream.Collectors;
 
 public class Movie {
 
-    public static int minRating = Rating.ONE_STAR.getValue();
-    public static int maxRating = Rating.FIVE_STARS.getValue();
+    public static int minRating = Rating.ONE.getValue();
+    public static int maxRating = Rating.TEN.getValue();
     public static int noRating = Rating.NO_RATING.getValue();
 
     private UUID uuid;

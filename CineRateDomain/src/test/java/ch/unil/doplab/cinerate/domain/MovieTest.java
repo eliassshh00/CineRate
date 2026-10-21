@@ -47,13 +47,15 @@ class MovieTest {
         printMethodName();
         System.out.println("inception is not rated yet (" + inception.getRatingAverage() + ")");
         assertEquals(Movie.noRating, inception.getRatingAverage());
-        inception.rate(Movie.maxRating);
-        assertEquals(Movie.maxRating, inception.getRatingAverage());
+        assertEquals(1, Movie.minRating);
+        assertEquals(10, Movie.maxRating);
+        inception.rate(10);
+        assertEquals(10.0, inception.getRatingAverage());
         System.out.println("inception is rated " + inception.getRatingAverage());
 
         var previousRating = inception.getRatingAverage();
         inception.rate(Movie.minRating);
-        assertEquals((Movie.minRating + Movie.maxRating) / 2.0, inception.getRatingAverage());
+        assertEquals(5.5, inception.getRatingAverage());
         assertEquals(2, inception.getRatingCount());
         System.out.println("inception is rated " + inception.getRatingAverage());
 
@@ -69,15 +71,15 @@ class MovieTest {
     @Test
     void testRatingFailure_OutOfRange() {
         printMethodName();
-        String expectedMessage = "Rating must be between " + Movie.minRating + " and " + Movie.maxRating;
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> inception.rate(Movie.maxRating + 1));
+        String expectedMessage = "Rating must be between 1 and 10";
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> inception.rate(11));
         assertTrue(exception.getMessage().contains(expectedMessage));
         assertEquals(Movie.noRating, inception.getRatingAverage());
 
-        exception = assertThrows(IllegalArgumentException.class, () -> inception.rate(Movie.minRating - 1));
+        exception = assertThrows(IllegalArgumentException.class, () -> inception.rate(0));
         assertTrue(exception.getMessage().contains(expectedMessage));
 
-        exception = assertThrows(IllegalArgumentException.class, () -> inception.unrate(Movie.maxRating + 1));
+        exception = assertThrows(IllegalArgumentException.class, () -> inception.unrate(11));
         assertTrue(exception.getMessage().contains(expectedMessage));
         assertEquals(Movie.noRating, inception.getRatingAverage());
         System.out.println(exception.getMessage());

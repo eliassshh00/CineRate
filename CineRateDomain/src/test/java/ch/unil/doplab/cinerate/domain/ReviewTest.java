@@ -38,7 +38,7 @@ class ReviewTest {
     @Test
     void testPostSuccess() {
         printMethodName();
-        var review = new Review(UUID.randomUUID(), Rating.FIVE_STARS, "Mind-blowing, I want to watch it again.");
+        var review = new Review(UUID.randomUUID(), Rating.TEN, "Mind-blowing, I want to watch it again.");
         review.post(alice, inception);
         assertTrue(review.isPosted());
         assertNotNull(review.getDate());
@@ -48,7 +48,7 @@ class ReviewTest {
         assertEquals("Inception", review.getMovieTitle());
         assertSame(review, alice.getReview(inception.getUUID()));
         assertSame(review, inception.getReview(alice.getUUID()));
-        assertEquals(5.0, inception.getRatingAverage());
+        assertEquals(10.0, inception.getRatingAverage());
         assertEquals(1, inception.getRatingCount());
         System.out.println(review);
     }
@@ -56,20 +56,20 @@ class ReviewTest {
     @Test
     void testPostSuccess_AverageRating() {
         printMethodName();
-        new Review(Rating.FIVE_STARS, "Masterpiece").post(alice, inception);
-        new Review(Rating.TWO_STARS, "Too confusing for me").post(jonas, inception);
-        new Review(Rating.FOUR_STARS, null).post(alice, interstellar);
-        assertEquals(3.5, inception.getRatingAverage());
+        new Review(Rating.TEN, "Masterpiece").post(alice, inception);
+        new Review(Rating.THREE, "Too confusing for me").post(jonas, inception);
+        new Review(Rating.EIGHT, null).post(alice, interstellar);
+        assertEquals(6.5, inception.getRatingAverage());
         assertEquals(2, inception.getReviews().size());
         assertEquals(2, alice.getReviews().size());
-        assertEquals(4.0, interstellar.getRatingAverage());
+        assertEquals(8.0, interstellar.getRatingAverage());
         System.out.println(inception.getTitle() + " is rated " + inception.getFormattedRating());
     }
 
     @Test
     void testPostFailure_NullUserOrMovie() {
         printMethodName();
-        var review = new Review(Rating.THREE_STARS, "Not bad");
+        var review = new Review(Rating.SIX, "Not bad");
         Exception exception = assertThrows(IllegalArgumentException.class, () -> review.post(null, inception));
         String expectedMessage = "User or movie cannot be null";
         assertTrue(exception.getMessage().contains(expectedMessage));
@@ -83,13 +83,13 @@ class ReviewTest {
     @Test
     void testPostFailure_AlreadyReviewed() {
         printMethodName();
-        new Review(Rating.FIVE_STARS, "Masterpiece").post(alice, inception);
-        var secondReview = new Review(Rating.ONE_STAR, "Changed my mind");
+        new Review(Rating.TEN, "Masterpiece").post(alice, inception);
+        var secondReview = new Review(Rating.ONE, "Changed my mind");
         Exception exception = assertThrows(IllegalStateException.class, () -> secondReview.post(alice, inception));
         String expectedMessage = alice.getUsername() + " has already reviewed " + inception.getTitle();
         String actualMessage = exception.getMessage();
         assertTrue(actualMessage.contains(expectedMessage));
-        assertEquals(5.0, inception.getRatingAverage());
+        assertEquals(10.0, inception.getRatingAverage());
         assertEquals(1, inception.getReviews().size());
         System.out.println(actualMessage);
     }
@@ -97,7 +97,7 @@ class ReviewTest {
     @Test
     void testPostFailure_InvalidRating() {
         printMethodName();
-        String expectedMessage = "Rating must be between 1 and 5 stars";
+        String expectedMessage = "Rating must be between 1 and 10";
         var unrated = new Review(Rating.NO_RATING, "No stars?");
         Exception exception = assertThrows(IllegalStateException.class, () -> unrated.post(alice, inception));
         assertTrue(exception.getMessage().contains(expectedMessage));
@@ -113,7 +113,7 @@ class ReviewTest {
     @Test
     void testPostFailure_CommentTooLong() {
         printMethodName();
-        var review = new Review(Rating.FOUR_STARS, "a".repeat(Review.maxCommentLength + 1));
+        var review = new Review(Rating.EIGHT, "a".repeat(Review.maxCommentLength + 1));
         Exception exception = assertThrows(IllegalStateException.class, () -> review.post(alice, inception));
         String expectedMessage = "Comment must not be longer than " + Review.maxCommentLength + " characters";
         String actualMessage = exception.getMessage();
@@ -126,7 +126,7 @@ class ReviewTest {
     void testPostFailure_MissingID() {
         printMethodName();
         var anonymous = new User("John", "Doe", "john@doe.com", "john", "1234");
-        var review = new Review(Rating.THREE_STARS, "Okay");
+        var review = new Review(Rating.SIX, "Okay");
         Exception exception = assertThrows(IllegalStateException.class, () -> review.post(anonymous, inception));
         String expectedMessage = "User and movie must have an ID";
         String actualMessage = exception.getMessage();
@@ -137,41 +137,41 @@ class ReviewTest {
     @Test
     void testEditSuccess() {
         printMethodName();
-        var review = new Review(Rating.TWO_STARS, "Too long");
+        var review = new Review(Rating.FOUR, "Too long");
         review.post(alice, inception);
-        new Review(Rating.FOUR_STARS, "Great").post(jonas, inception);
-        assertEquals(3.0, inception.getRatingAverage());
-        review.edit(alice, inception, Rating.FIVE_STARS, "Second viewing: brilliant");
-        assertEquals(Rating.FIVE_STARS, review.getRating());
+        new Review(Rating.EIGHT, "Great").post(jonas, inception);
+        assertEquals(6.0, inception.getRatingAverage());
+        review.edit(alice, inception, Rating.TEN, "Second viewing: brilliant");
+        assertEquals(Rating.TEN, review.getRating());
         assertEquals("Second viewing: brilliant", review.getComment());
-        assertEquals(4.5, inception.getRatingAverage());
+        assertEquals(9.0, inception.getRatingAverage());
         assertEquals(2, inception.getRatingCount());
     }
 
     @Test
     void testEditFailure_WrongUser() {
         printMethodName();
-        var review = new Review(Rating.TWO_STARS, "Too long");
+        var review = new Review(Rating.FOUR, "Too long");
         review.post(alice, inception);
-        Exception exception = assertThrows(IllegalStateException.class, () -> review.edit(jonas, inception, Rating.ONE_STAR, "Hacked"));
+        Exception exception = assertThrows(IllegalStateException.class, () -> review.edit(jonas, inception, Rating.ONE, "Hacked"));
         String expectedMessage = "Review is not written by " + jonas.getUsername();
         String actualMessage = exception.getMessage();
         assertTrue(actualMessage.contains(expectedMessage));
-        assertEquals(Rating.TWO_STARS, review.getRating());
-        assertEquals(2.0, inception.getRatingAverage());
+        assertEquals(Rating.FOUR, review.getRating());
+        assertEquals(4.0, inception.getRatingAverage());
         System.out.println(actualMessage);
     }
 
     @Test
     void testDeleteSuccess() {
         printMethodName();
-        var review = new Review(Rating.FIVE_STARS, "Masterpiece");
+        var review = new Review(Rating.TEN, "Masterpiece");
         review.post(alice, inception);
-        new Review(Rating.THREE_STARS, "Good").post(jonas, inception);
+        new Review(Rating.SIX, "Good").post(jonas, inception);
         review.delete(alice, inception);
         assertNull(alice.getReview(inception.getUUID()));
         assertNull(inception.getReview(alice.getUUID()));
-        assertEquals(3.0, inception.getRatingAverage());
+        assertEquals(6.0, inception.getRatingAverage());
         assertEquals(1, inception.getRatingCount());
         assertTrue(alice.getReviews().isEmpty());
     }
@@ -179,7 +179,7 @@ class ReviewTest {
     @Test
     void testDeleteFailure_WrongMovie() {
         printMethodName();
-        var review = new Review(Rating.FIVE_STARS, "Masterpiece");
+        var review = new Review(Rating.TEN, "Masterpiece");
         review.post(alice, inception);
         Exception exception = assertThrows(IllegalStateException.class, () -> review.delete(alice, interstellar));
         String expectedMessage = "Review is not about " + interstellar.getTitle();
@@ -192,7 +192,7 @@ class ReviewTest {
     @Test
     void testDeleteFailure_AlreadyDeleted() {
         printMethodName();
-        var review = new Review(Rating.FIVE_STARS, "Masterpiece");
+        var review = new Review(Rating.TEN, "Masterpiece");
         review.post(alice, inception);
         review.delete(alice, inception);
         Exception exception = assertThrows(IllegalStateException.class, () -> review.delete(alice, inception));

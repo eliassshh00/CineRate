@@ -1,10 +1,10 @@
 # CineRate
 
 CineRate is a movie rating and review application built by our group for the Software Architectures course
-(HEC Lausanne, UNIL, 2026). Registered users browse a catalogue of movies, rate and review them (one review
-per user and movie), keep a personal watchlist, and see the average rating of every movie. Movie data will
-be imported from The Movie Database (TMDB), and an advanced search finds movies by title, actor, director,
-genre or theme keywords.
+(HEC Lausanne, UNIL, 2026). Registered users browse a catalogue of movies, rate them from 1 to 10 and review
+them (one review per user and movie), keep a personal watchlist, and see the average rating of every movie
+(e.g. "8.7 / 10"). Movie data will be imported from The Movie Database (TMDB), and an advanced search finds
+movies by title, actor, director, genre or theme keywords.
 
 The application is built incrementally:
 

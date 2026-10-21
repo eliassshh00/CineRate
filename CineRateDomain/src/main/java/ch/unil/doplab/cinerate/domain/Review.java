@@ -116,7 +116,7 @@ public class Review {
 
     private void checkContent(Rating rating, String comment) {
         if (rating == null || rating.getValue() < Movie.minRating || rating.getValue() > Movie.maxRating) {
-            throw new IllegalStateException("Rating must be between " + Movie.minRating + " and " + Movie.maxRating + " stars");
+            throw new IllegalStateException("Rating must be between " + Movie.minRating + " and " + Movie.maxRating);
         }
         if (comment != null && comment.length() > maxCommentLength) {
             throw new IllegalStateException("Comment must not be longer than " + maxCommentLength + " characters");
