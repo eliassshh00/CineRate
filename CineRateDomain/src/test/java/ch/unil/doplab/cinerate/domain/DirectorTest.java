@@ -49,8 +49,10 @@ class DirectorTest {
     void testReplaceSuccess() {
         printMethodName();
         villeneuve.addMovie(duneID);
+        var uuid = nolan.getUUID();
         nolan.replaceWith(villeneuve);
-        assertEquals(villeneuve, nolan);
+        assertEquals(uuid, nolan.getUUID());
+        assertNotEquals(villeneuve, nolan);
         assertEquals("Denis Villeneuve", nolan.getFullName());
         assertEquals(List.of(duneID), nolan.getMovies());
     }

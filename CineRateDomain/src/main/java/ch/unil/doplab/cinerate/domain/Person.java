@@ -38,7 +38,6 @@ public class Person {
         if (person == null) {
             throw new IllegalArgumentException("Person must not be null");
         }
-        this.uuid = person.uuid;
         this.tmdbId = person.tmdbId;
         this.firstName = person.firstName;
         this.lastName = person.lastName;
@@ -134,12 +133,19 @@ public class Person {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Person person)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
+        Person person = (Person) o;
+        if (uuid != null || person.uuid != null) {
+            return Objects.equals(uuid, person.uuid);
+        }
         return Objects.equals(uuid, person.uuid) && Objects.equals(getTmdbId(), person.getTmdbId()) && Objects.equals(getFirstName(), person.getFirstName()) && Objects.equals(getLastName(), person.getLastName()) && Objects.equals(getBirthDate(), person.getBirthDate()) && Objects.equals(getNationality(), person.getNationality());
     }
 
     @Override
     public int hashCode() {
+        if (uuid != null) {
+            return uuid.hashCode();
+        }
         return Objects.hash(uuid, getTmdbId(), getFirstName(), getLastName(), getBirthDate(), getNationality());
     }
 }

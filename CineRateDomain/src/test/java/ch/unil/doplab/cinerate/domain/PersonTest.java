@@ -23,8 +23,10 @@ class PersonTest {
         printMethodName();
         var jessica = new Person(UUID.randomUUID(), "Jessica", "Chastain", LocalDate.of(1977, 3, 24), "American");
         jessica.setTmdbId(83002);
+        var uuid = anne.getUUID();
         anne.replaceWith(jessica);
-        assertEquals(jessica, anne);
+        assertEquals(uuid, anne.getUUID());
+        assertEquals(83002, anne.getTmdbId());
         assertEquals("Jessica Chastain", anne.getFullName());
     }
 

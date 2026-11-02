@@ -91,8 +91,11 @@ class MovieTest {
         interstellar.addGenre(Genre.Drama);
         interstellar.addKeyword("space");
         interstellar.setDirector(nolan);
+        var uuid = inception.getUUID();
         inception.replaceWith(interstellar);
-        assertEquals(interstellar, inception);
+        assertEquals(uuid, inception.getUUID());
+        assertNotEquals(interstellar, inception);
+        assertEquals(nolan.getUUID(), inception.getDirectorID());
         assertEquals("Interstellar", inception.getTitle());
         assertEquals(List.of(Genre.Drama), inception.getGenres());
         assertFalse(inception.hasKeyword("dream"));
@@ -195,5 +198,145 @@ class MovieTest {
         Exception exception = assertThrows(IllegalArgumentException.class, () -> inception.addKeyword(" "));
         assertTrue(exception.getMessage().contains("Keyword must not be empty"));
         System.out.println(exception.getMessage());
+    }
+
+    @Test
+    void testReplaceSuccess_KeepsServerData() {
+        printMethodName();
+        var alice = new User(UUID.randomUUID(), "Alice", "Martin", "alice@cinerate.ch", "alice_m", "1234");
+        new Review(Rating.EIGHT, "Great").post(alice, inception);
+        var put = new Movie(UUID.randomUUID(), "Inception (edited)", 2010);
+        inception.replaceWith(put);
+        assertEquals("Inception (edited)", inception.getTitle());
+        assertNotEquals(put.getUUID(), inception.getUUID());
+        assertEquals(1, inception.getReviews().size());
+        assertEquals(1, inception.getRatingCount());
+        assertEquals(8.0, inception.getRatingAverage());
+    }
+
+    @Test
+    void testReplaceSuccess_NoAliasing() {
+        printMethodName();
+        var source = new Movie();
+        inception.replaceWith(source);
+        source.addKeyword("leak");
+        source.addGenre(Genre.Comedy);
+        source.setCast(List.of(UUID.randomUUID()));
+        assertTrue(inception.getKeywords().isEmpty());
+        assertTrue(inception.getGenres().isEmpty());
+        assertTrue(inception.getCast().isEmpty());
+    }
+
+    @Test
+    void testMergeSuccess_IgnoresRatingAndReviews() {
+        printMethodName();
+        var patch = new Movie();
+        patch.setRatingAverage(10);
+        patch.setRatingCount(99);
+        inception.mergeWith(patch);
+        assertEquals(0, inception.getRatingCount());
+        assertEquals(Movie.noRating, inception.getRatingAverage());
+    }
+
+    @Test
+    void testChangeDirectorSuccess() {
+        printMethodName();
+        var villeneuve = new Director(UUID.randomUUID(), "Denis", "Villeneuve", null, null);
+        inception.setDirector(nolan);
+        inception.setDirector(villeneuve, nolan);
+        assertTrue(inception.isDirectedBy(villeneuve.getUUID()));
+        assertTrue(villeneuve.hasDirected(inception.getUUID()));
+        assertFalse(nolan.hasDirected(inception.getUUID()));
+        inception.removeDirector(villeneuve);
+        assertNull(inception.getDirectorID());
+        assertNull(inception.getDirectorName());
+        assertFalse(villeneuve.hasDirected(inception.getUUID()));
+    }
+
+    @Test
+    void testChangeDirectorFailure_WrongOldDirector() {
+        printMethodName();
+        var villeneuve = new Director(UUID.randomUUID(), "Denis", "Villeneuve", null, null);
+        inception.setDirector(nolan);
+        Exception exception = assertThrows(IllegalStateException.class, () -> inception.setDirector(nolan, villeneuve));
+        assertTrue(exception.getMessage().contains("Denis Villeneuve is not the director of Inception"));
+        assertTrue(inception.isDirectedBy(nolan.getUUID()));
+        exception = assertThrows(IllegalStateException.class, () -> inception.removeDirector(villeneuve));
+        System.out.println(exception.getMessage());
+    }
+
+    @Test
+    void testNullSettersSuccess() {
+        printMethodName();
+        var movie = new Movie();
+        movie.setGenres(null);
+        movie.setCast(null);
+        movie.setKeywords(null);
+        movie.setReviews(null);
+        assertTrue(movie.getGenres().isEmpty());
+        assertTrue(movie.getCast().isEmpty());
+        assertTrue(movie.getKeywords().isEmpty());
+        assertTrue(movie.getReviews().isEmpty());
+    }
+
+    @Test
+    void testSetReviewsFailure_MissingUserID() {
+        printMethodName();
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> inception.setReviews(List.of(new Review(Rating.ONE, "x"))));
+        assertTrue(exception.getMessage().contains("must have a user ID"));
+        System.out.println(exception.getMessage());
+    }
+
+    @Test
+    void testGetReviewsSuccess_NullDate() {
+        printMethodName();
+        var unposted = new Review(Rating.ONE, "no date");
+        unposted.setUserID(UUID.randomUUID());
+        var posted = new Review(Rating.TWO, "dated");
+        posted.setUserID(UUID.randomUUID());
+        posted.setDate(java.time.LocalDateTime.now());
+        inception.setReviews(List.of(unposted, posted));
+        assertEquals(List.of(posted, unposted), inception.getReviews());
+    }
+
+    @Test
+    void testUnrateFailure_NoRating() {
+        printMethodName();
+        Exception exception = assertThrows(IllegalStateException.class, () -> inception.unrate(5));
+        assertTrue(exception.getMessage().contains("has no rating to remove"));
+        System.out.println(exception.getMessage());
+    }
+
+    @Test
+    void testKeywordsSuccess_TurkishLocale() {
+        printMethodName();
+        var defaultLocale = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr"));
+            inception.addKeyword("HEIST");
+            assertTrue(inception.getKeywords().contains("heist"));
+        } finally {
+            java.util.Locale.setDefault(defaultLocale);
+        }
+    }
+
+    @Test
+    void testEqualsSuccess_SameUUID() {
+        printMethodName();
+        var copy = new Movie(inception.getUUID(), "Other title", 1999);
+        assertEquals(inception, copy);
+        assertEquals(inception.hashCode(), copy.hashCode());
+        assertNotEquals(inception, interstellar);
+    }
+
+    @Test
+    void testJsonSuccess_DirectorNotAProperty() {
+        printMethodName();
+        inception.setDirector(nolan);
+        var jsonb = jakarta.json.bind.JsonbBuilder.create();
+        var json = jsonb.toJson(inception);
+        var back = jsonb.fromJson(json, Movie.class);
+        assertEquals(nolan.getUUID(), back.getDirectorID());
+        assertEquals(inception.getTitle(), back.getTitle());
     }
 }

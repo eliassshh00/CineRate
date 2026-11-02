@@ -1,8 +1,9 @@
 package ch.unil.doplab.cinerate.domain;
 
+import jakarta.json.bind.annotation.JsonbTransient;
+
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class User {
 
@@ -48,17 +49,16 @@ public class User {
         if (user == null) {
             throw new IllegalArgumentException("User must not be null");
         }
-        this.uuid = user.uuid;
+        // uuid, role, registrationDate and reviews belong to the server: they are kept
         this.firstName = user.firstName;
         this.lastName = user.lastName;
         this.email = user.email;
         this.username = user.username;
-        this.password = user.password;
-        this.role = user.role;
-        this.registrationDate = user.registrationDate;
-        this.watchlist = user.watchlist;
-        this.watchedMovies = user.watchedMovies;
-        this.reviews = user.reviews;
+        if (user.password != null) {
+            this.password = user.password;
+        }
+        this.watchlist = new LinkedHashSet<>(user.watchlist);
+        this.watchedMovies = new LinkedHashSet<>(user.watchedMovies);
     }
 
     public void mergeWith(User user) {
@@ -88,9 +88,6 @@ public class User {
         }
         if (!user.watchedMovies.isEmpty()) {
             this.watchedMovies.addAll(user.watchedMovies);
-        }
-        if (!user.reviews.isEmpty()) {
-            this.reviews.putAll(user.reviews);
         }
     }
 
@@ -130,6 +127,7 @@ public class User {
         this.username = username;
     }
 
+    @JsonbTransient
     public String getPassword() {
         return password;
     }
@@ -178,7 +176,8 @@ public class User {
     }
 
     public void setWatchlist(List<UUID> watchlist) {
-        this.watchlist = new LinkedHashSet<>(watchlist);
+        this.watchlist = watchlist == null ? new LinkedHashSet<>() : new LinkedHashSet<>(watchlist);
+        this.watchedMovies.retainAll(this.watchlist);
     }
 
     public List<UUID> getWatchedMovies() {
@@ -186,7 +185,7 @@ public class User {
     }
 
     public void setWatchedMovies(List<UUID> watchedMovies) {
-        this.watchedMovies = new LinkedHashSet<>(watchedMovies);
+        this.watchedMovies = watchedMovies == null ? new LinkedHashSet<>() : new LinkedHashSet<>(watchedMovies);
     }
 
     public void addToWatchlist(UUID movieID) {
@@ -200,6 +199,9 @@ public class User {
     }
 
     public void removeFromWatchlist(UUID movieID) {
+        if (movieID == null) {
+            throw new IllegalArgumentException("Movie ID must not be null");
+        }
         if (!watchlist.contains(movieID)) {
             throw new IllegalStateException("Movie " + movieID + " is not in the watchlist of " + username);
         }
@@ -208,6 +210,9 @@ public class User {
     }
 
     public void markAsWatched(UUID movieID) {
+        if (movieID == null) {
+            throw new IllegalArgumentException("Movie ID must not be null");
+        }
         if (!watchlist.contains(movieID)) {
             throw new IllegalStateException("Movie " + movieID + " is not in the watchlist of " + username);
         }
@@ -215,6 +220,9 @@ public class User {
     }
 
     public void markAsUnwatched(UUID movieID) {
+        if (movieID == null) {
+            throw new IllegalArgumentException("Movie ID must not be null");
+        }
         watchedMovies.remove(movieID);
     }
 
@@ -244,12 +252,21 @@ public class User {
 
     public List<Review> getReviews() {
         return reviews.values().stream()
-                .sorted(Comparator.comparing(Review::getDate))
+                .sorted(Comparator.comparing(Review::getDate, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 
     public void setReviews(List<Review> reviews) {
-        this.reviews = reviews.stream().collect(Collectors.toMap(Review::getMovieID, review -> review, (a, b) -> a, TreeMap::new));
+        this.reviews = new TreeMap<>();
+        if (reviews == null) {
+            return;
+        }
+        for (Review review : reviews) {
+            if (review == null || review.getMovieID() == null) {
+                throw new IllegalArgumentException("Every review of a user must have a movie ID");
+            }
+            this.reviews.putIfAbsent(review.getMovieID(), review);
+        }
     }
 
     public String describe() {
@@ -266,12 +283,19 @@ public class User {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof User user)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        if (uuid != null || user.uuid != null) {
+            return Objects.equals(uuid, user.uuid);
+        }
         return Objects.equals(uuid, user.uuid) && Objects.equals(getFirstName(), user.getFirstName()) && Objects.equals(getLastName(), user.getLastName()) && Objects.equals(getUsername(), user.getUsername()) && Objects.equals(getEmail(), user.getEmail()) && Objects.equals(getRole(), user.getRole()) && Objects.equals(getWatchlist(), user.getWatchlist());
     }
 
     @Override
     public int hashCode() {
+        if (uuid != null) {
+            return uuid.hashCode();
+        }
         return Objects.hash(uuid, getFirstName(), getLastName(), getUsername(), getEmail(), getRole(), getWatchlist());
     }
 }

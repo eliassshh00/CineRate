@@ -49,12 +49,12 @@ public class Actor extends Person {
     }
 
     public void setMovies(List<UUID> movies) {
-        this.movies = new LinkedHashSet<>(movies);
+        this.movies = movies == null ? new LinkedHashSet<>() : new LinkedHashSet<>(movies);
     }
 
     public void replaceWith(Actor actor) {
         super.replaceWith(actor);
-        this.movies = actor.movies;
+        this.movies = new LinkedHashSet<>(actor.movies);
     }
 
     public void mergeWith(Actor actor) {

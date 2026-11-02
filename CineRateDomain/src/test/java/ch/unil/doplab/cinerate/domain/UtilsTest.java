@@ -33,4 +33,16 @@ class UtilsTest {
         assertTrue(Utils.formatMovieRating(Movie.maxRating).endsWith(" / 10"));
         System.out.println(Utils.formatMovieRating(8.7));
     }
+
+    @Test
+    void testFormatMovieRatingSuccess_FrenchLocale() {
+        printMethodName();
+        var defaultLocale = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.FRANCE);
+            assertEquals("7.5 / 10", Utils.formatMovieRating(7.5));
+        } finally {
+            java.util.Locale.setDefault(defaultLocale);
+        }
+    }
 }

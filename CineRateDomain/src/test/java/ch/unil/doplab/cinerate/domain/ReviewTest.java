@@ -202,4 +202,64 @@ class ReviewTest {
         assertEquals(Movie.noRating, inception.getRatingAverage());
         System.out.println(actualMessage);
     }
+
+    @Test
+    void testEditSuccess_DetachedCopy() {
+        printMethodName();
+        new Review(Rating.TWO, "Meh").post(alice, inception);
+        new Review(Rating.EIGHT, "Great").post(jonas, inception);
+        var copy = new Review(Rating.TEN, "copy from JSON");
+        copy.setUserID(alice.getUUID());
+        copy.setMovieID(inception.getUUID());
+        copy.edit(alice, inception, Rating.SIX, "Better the second time");
+        assertEquals(7.0, inception.getRatingAverage(), 1e-9);
+        assertEquals(2, inception.getRatingCount());
+        assertEquals(Rating.SIX, inception.getReview(alice.getUUID()).getRating());
+        assertEquals(Rating.SIX, alice.getReview(inception.getUUID()).getRating());
+        assertEquals("Better the second time", inception.getReview(alice.getUUID()).getComment());
+        assertEquals(Rating.SIX, copy.getRating());
+    }
+
+    @Test
+    void testDeleteSuccess_DetachedCopy() {
+        printMethodName();
+        new Review(Rating.TWO, "Meh").post(alice, inception);
+        new Review(Rating.EIGHT, "Great").post(jonas, inception);
+        var copy = new Review(Rating.TEN, "copy with a wrong rating");
+        copy.setUserID(alice.getUUID());
+        copy.setMovieID(inception.getUUID());
+        copy.delete(alice, inception);
+        assertEquals(8.0, inception.getRatingAverage(), 1e-9);
+        assertEquals(1, inception.getRatingCount());
+        assertFalse(alice.hasReviewed(inception.getUUID()));
+        assertFalse(inception.hasReviewFrom(alice.getUUID()));
+    }
+
+    @Test
+    void testEditAndDeleteSuccess_MultiUserAverage() {
+        printMethodName();
+        var bob = new User(UUID.randomUUID(), "Bob", "Dylan", "bob@cinerate.ch", "bob", "1234");
+        var aliceReview = new Review(Rating.TEN, "Top");
+        aliceReview.post(alice, inception);
+        new Review(Rating.FOUR, "So so").post(jonas, inception);
+        new Review(Rating.SEVEN, "Good").post(bob, inception);
+        assertEquals(7.0, inception.getRatingAverage(), 1e-9);
+        aliceReview.edit(alice, inception, Rating.ONE, "Changed my mind");
+        assertEquals(4.0, inception.getRatingAverage(), 1e-9);
+        aliceReview.delete(alice, inception);
+        assertEquals(5.5, inception.getRatingAverage(), 1e-9);
+        assertEquals(2, inception.getRatingCount());
+    }
+
+    @Test
+    void testJsonSuccess_RoundTrip() {
+        printMethodName();
+        var review = new Review(UUID.randomUUID(), Rating.NINE, "Great");
+        review.post(alice, inception);
+        var jsonb = jakarta.json.bind.JsonbBuilder.create();
+        var back = jsonb.fromJson(jsonb.toJson(review), Review.class);
+        assertEquals(review, back);
+        assertEquals(alice.getUUID(), back.getUserID());
+        assertEquals("Inception", back.getMovieTitle());
+    }
 }

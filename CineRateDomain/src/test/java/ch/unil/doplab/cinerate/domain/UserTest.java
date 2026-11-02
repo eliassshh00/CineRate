@@ -36,10 +36,13 @@ class UserTest {
         var jonas = new User(UUID.randomUUID(), "Jonas", "Keller", "jonas@cinerate.ch", "jonas84", "5678", Utils.adminRole);
         jonas.addToWatchlist(inceptionID);
         alice.addToWatchlist(mementoID);
+        var uuid = alice.getUUID();
         alice.replaceWith(jonas);
-        assertEquals(jonas, alice);
+        assertEquals(uuid, alice.getUUID());
+        assertEquals("jonas84", alice.getUsername());
         assertEquals(List.of(inceptionID), alice.getWatchlist());
-        assertTrue(alice.isAdmin());
+        assertFalse(alice.isAdmin());
+        assertEquals("5678", alice.getPassword());
     }
 
     @Test
@@ -159,5 +162,96 @@ class UserTest {
         assertTrue(actualMessage.contains(expectedMessage));
         assertFalse(alice.hasWatched(mementoID));
         System.out.println(actualMessage);
+    }
+
+    @Test
+    void testReplaceSuccess_KeepsServerData() {
+        printMethodName();
+        var movie = new Movie(UUID.randomUUID(), "Inception", 2010);
+        new Review(Rating.NINE, "Great").post(alice, movie);
+        var registered = alice.getRegistrationDate();
+        var put = new User(UUID.randomUUID(), "Al", "Ice", "al@cinerate.ch", "al", null, Utils.adminRole);
+        put.setRegistrationDate(LocalDate.of(2000, 1, 1));
+        alice.replaceWith(put);
+        assertEquals("1234", alice.getPassword());
+        assertEquals(Utils.memberRole, alice.getRole());
+        assertEquals(registered, alice.getRegistrationDate());
+        assertTrue(alice.hasReviewed(movie.getUUID()));
+    }
+
+    @Test
+    void testReplaceSuccess_NoAliasing() {
+        printMethodName();
+        var source = new User();
+        alice.replaceWith(source);
+        source.addToWatchlist(inceptionID);
+        source.markAsWatched(inceptionID);
+        assertTrue(alice.getWatchlist().isEmpty());
+        assertTrue(alice.getWatchedMovies().isEmpty());
+    }
+
+    @Test
+    void testMergeSuccess_IgnoresReviews() {
+        printMethodName();
+        var patch = new User();
+        var review = new Review(Rating.ONE, "fake");
+        review.setMovieID(inceptionID);
+        patch.setReviews(List.of(review));
+        alice.mergeWith(patch);
+        assertFalse(alice.hasReviewed(inceptionID));
+    }
+
+    @Test
+    void testSetWatchlistSuccess_PrunesWatched() {
+        printMethodName();
+        alice.addToWatchlist(inceptionID);
+        alice.addToWatchlist(mementoID);
+        alice.markAsWatched(inceptionID);
+        alice.markAsWatched(mementoID);
+        alice.setWatchlist(List.of(mementoID));
+        assertEquals(List.of(mementoID), alice.getWatchedMovies());
+        alice.setWatchlist(null);
+        assertTrue(alice.getWatchlist().isEmpty());
+        assertTrue(alice.getWatchedMovies().isEmpty());
+    }
+
+    @Test
+    void testWatchlistFailure_NullMovie() {
+        printMethodName();
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> alice.removeFromWatchlist(null));
+        assertTrue(exception.getMessage().contains("Movie ID must not be null"));
+        assertThrows(IllegalArgumentException.class, () -> alice.markAsWatched(null));
+        assertThrows(IllegalArgumentException.class, () -> alice.markAsUnwatched(null));
+        System.out.println(exception.getMessage());
+    }
+
+    @Test
+    void testNullSettersSuccess() {
+        printMethodName();
+        alice.setWatchedMovies(null);
+        alice.setReviews(null);
+        assertTrue(alice.getWatchedMovies().isEmpty());
+        assertTrue(alice.getReviews().isEmpty());
+    }
+
+    @Test
+    void testJsonSuccess_PasswordNotSerialized() {
+        printMethodName();
+        alice.setPassword(Utils.hashPassword("popcorn"));
+        var jsonb = jakarta.json.bind.JsonbBuilder.create();
+        var json = jsonb.toJson(alice);
+        System.out.println(json);
+        assertFalse(json.contains("password"));
+        assertFalse(json.contains(alice.getPassword()));
+        var input = jsonb.fromJson("{\"username\":\"bob\",\"password\":\"secret\"}", User.class);
+        assertEquals("secret", input.getPassword());
+    }
+
+    @Test
+    void testEqualsSuccess_SameUUID() {
+        printMethodName();
+        var copy = new User(alice.getUUID(), "Other", "Name", "x@y.ch", "other", null);
+        assertEquals(alice, copy);
+        assertEquals(alice.hashCode(), copy.hashCode());
     }
 }

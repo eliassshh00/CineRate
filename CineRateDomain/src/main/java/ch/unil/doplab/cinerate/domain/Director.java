@@ -49,12 +49,12 @@ public class Director extends Person {
     }
 
     public void setMovies(List<UUID> movies) {
-        this.movies = new LinkedHashSet<>(movies);
+        this.movies = movies == null ? new LinkedHashSet<>() : new LinkedHashSet<>(movies);
     }
 
     public void replaceWith(Director director) {
         super.replaceWith(director);
-        this.movies = director.movies;
+        this.movies = new LinkedHashSet<>(director.movies);
     }
 
     public void mergeWith(Director director) {

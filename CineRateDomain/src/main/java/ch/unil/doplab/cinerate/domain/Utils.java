@@ -1,6 +1,7 @@
 package ch.unil.doplab.cinerate.domain;
 
 import java.lang.reflect.Constructor;
+import java.util.Locale;
 import org.mindrot.jbcrypt.BCrypt;
 
 public class Utils {
@@ -37,7 +38,7 @@ public class Utils {
     }
 
     public static String formatMovieRating(double movieRating) {
-        return movieRating <= 0 ? "not rated yet" : String.format("%.1f / %d", movieRating, Movie.maxRating);
+        return movieRating <= 0 ? "not rated yet" : String.format(Locale.ROOT, "%.1f / %d", movieRating, Movie.maxRating);
     }
 
     public static String hashPassword(String plainPassword) {

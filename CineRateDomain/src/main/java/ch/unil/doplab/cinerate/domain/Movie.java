@@ -1,13 +1,14 @@
 package ch.unil.doplab.cinerate.domain;
 
+import jakarta.json.bind.annotation.JsonbTransient;
+
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Movie {
 
-    public static int minRating = Rating.ONE.getValue();
-    public static int maxRating = Rating.TEN.getValue();
-    public static int noRating = Rating.NO_RATING.getValue();
+    public static final int minRating = Rating.ONE.getValue();
+    public static final int maxRating = Rating.TEN.getValue();
+    public static final int noRating = Rating.NO_RATING.getValue();
 
     private UUID uuid;
     private Integer tmdbId;
@@ -67,21 +68,18 @@ public class Movie {
         if (movie == null) {
             throw new IllegalArgumentException("Movie must not be null");
         }
-        this.uuid = movie.uuid;
+        // uuid, reviews and rating statistics belong to the server: they are kept
         this.tmdbId = movie.tmdbId;
         this.title = movie.title;
         this.releaseYear = movie.releaseYear;
         this.synopsis = movie.synopsis;
         this.duration = movie.duration;
         this.posterUrl = movie.posterUrl;
-        this.genres = movie.genres;
+        this.genres = movie.genres.isEmpty() ? EnumSet.noneOf(Genre.class) : EnumSet.copyOf(movie.genres);
         this.directorID = movie.directorID;
         this.directorName = movie.directorName;
-        this.cast = movie.cast;
-        this.keywords = movie.keywords;
-        this.ratingAverage = movie.ratingAverage;
-        this.ratingCount = movie.ratingCount;
-        this.reviews = movie.reviews;
+        this.cast = new ArrayList<>(movie.cast);
+        this.keywords = new TreeSet<>(movie.keywords);
     }
 
     public void mergeWith(Movie movie) {
@@ -189,7 +187,7 @@ public class Movie {
     }
 
     public void setGenres(List<Genre> genres) {
-        this.genres = genres.isEmpty() ? EnumSet.noneOf(Genre.class) : EnumSet.copyOf(genres);
+        this.genres = genres == null || genres.isEmpty() ? EnumSet.noneOf(Genre.class) : EnumSet.copyOf(genres);
     }
 
     public void addGenre(Genre genre) {
@@ -223,16 +221,39 @@ public class Movie {
         this.directorName = directorName;
     }
 
+    @JsonbTransient
     public void setDirector(Director director) {
+        setDirector(director, null);
+    }
+
+    public void setDirector(Director newDirector, Director oldDirector) {
+        if (newDirector == null) {
+            throw new IllegalArgumentException("Director must not be null");
+        }
+        if (newDirector.getUUID() == null || this.uuid == null) {
+            throw new IllegalStateException("Movie and director must have an ID");
+        }
+        if (oldDirector != null) {
+            if (!isDirectedBy(oldDirector.getUUID())) {
+                throw new IllegalStateException(oldDirector.getFullName() + " is not the director of " + title);
+            }
+            oldDirector.removeMovie(this.uuid);
+        }
+        this.directorID = newDirector.getUUID();
+        this.directorName = newDirector.getFullName();
+        newDirector.addMovie(this.uuid);
+    }
+
+    public void removeDirector(Director director) {
         if (director == null) {
             throw new IllegalArgumentException("Director must not be null");
         }
-        if (director.getUUID() == null || this.uuid == null) {
-            throw new IllegalStateException("Movie and director must have an ID");
+        if (!isDirectedBy(director.getUUID())) {
+            throw new IllegalStateException(director.getFullName() + " is not the director of " + title);
         }
-        this.directorID = director.getUUID();
-        this.directorName = director.getFullName();
-        director.addMovie(this.uuid);
+        this.directorID = null;
+        this.directorName = null;
+        director.removeMovie(this.uuid);
     }
 
     public boolean isDirectedBy(UUID directorID) {
@@ -244,7 +265,7 @@ public class Movie {
     }
 
     public void setCast(List<UUID> cast) {
-        this.cast = new ArrayList<>(new LinkedHashSet<>(cast));
+        this.cast = cast == null ? new ArrayList<>() : new ArrayList<>(new LinkedHashSet<>(cast));
     }
 
     public void addActor(Actor actor) {
@@ -282,24 +303,26 @@ public class Movie {
 
     public void setKeywords(List<String> keywords) {
         this.keywords = new TreeSet<>();
-        keywords.forEach(this::addKeyword);
+        if (keywords != null) {
+            keywords.forEach(this::addKeyword);
+        }
     }
 
     public void addKeyword(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             throw new IllegalArgumentException("Keyword must not be empty");
         }
-        keywords.add(keyword.trim().toLowerCase());
+        keywords.add(keyword.trim().toLowerCase(Locale.ROOT));
     }
 
     public void removeKeyword(String keyword) {
         if (keyword != null) {
-            keywords.remove(keyword.trim().toLowerCase());
+            keywords.remove(keyword.trim().toLowerCase(Locale.ROOT));
         }
     }
 
     public boolean hasKeyword(String keyword) {
-        return keyword != null && keywords.contains(keyword.trim().toLowerCase());
+        return keyword != null && keywords.contains(keyword.trim().toLowerCase(Locale.ROOT));
     }
 
     public double getRatingAverage() {
@@ -333,6 +356,9 @@ public class Movie {
         if (rating < minRating || rating > maxRating) {
             throw new IllegalArgumentException("Rating must be between " + minRating + " and " + maxRating);
         }
+        if (ratingCount <= 0) {
+            throw new IllegalStateException(title + " has no rating to remove");
+        }
         if (ratingCount > 1) {
             ratingAverage = (ratingAverage * ratingCount - rating) / --ratingCount;
         } else {
@@ -359,12 +385,21 @@ public class Movie {
 
     public List<Review> getReviews() {
         return reviews.values().stream()
-                .sorted(Comparator.comparing(Review::getDate))
+                .sorted(Comparator.comparing(Review::getDate, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 
     public void setReviews(List<Review> reviews) {
-        this.reviews = reviews.stream().collect(Collectors.toMap(Review::getUserID, review -> review, (a, b) -> a, TreeMap::new));
+        this.reviews = new TreeMap<>();
+        if (reviews == null) {
+            return;
+        }
+        for (Review review : reviews) {
+            if (review == null || review.getUserID() == null) {
+                throw new IllegalArgumentException("Every review of a movie must have a user ID");
+            }
+            this.reviews.putIfAbsent(review.getUserID(), review);
+        }
     }
 
     public String describe() {
@@ -382,12 +417,19 @@ public class Movie {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Movie movie)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
+        Movie movie = (Movie) o;
+        if (uuid != null || movie.uuid != null) {
+            return Objects.equals(uuid, movie.uuid);
+        }
         return getReleaseYear() == movie.getReleaseYear() && getDuration() == movie.getDuration() && Objects.equals(uuid, movie.uuid) && Objects.equals(getTmdbId(), movie.getTmdbId()) && Objects.equals(getTitle(), movie.getTitle()) && Objects.equals(getSynopsis(), movie.getSynopsis()) && Objects.equals(getPosterUrl(), movie.getPosterUrl()) && Objects.equals(getGenres(), movie.getGenres()) && Objects.equals(getDirectorID(), movie.getDirectorID()) && Objects.equals(getCast(), movie.getCast()) && Objects.equals(getKeywords(), movie.getKeywords());
     }
 
     @Override
     public int hashCode() {
+        if (uuid != null) {
+            return uuid.hashCode();
+        }
         return Objects.hash(uuid, getTmdbId(), getTitle(), getReleaseYear(), getSynopsis(), getDuration(), getPosterUrl(), getGenres(), getDirectorID(), getCast(), getKeywords());
     }
 }

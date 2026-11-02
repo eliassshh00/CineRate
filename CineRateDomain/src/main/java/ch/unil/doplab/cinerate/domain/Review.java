@@ -1,12 +1,15 @@
 package ch.unil.doplab.cinerate.domain;
 
+import jakarta.json.bind.annotation.JsonbTransient;
+
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 public class Review {
 
-    public static int maxCommentLength = 1000;
+    public static final int maxCommentLength = 1000;
 
     private UUID uuid;
     private UUID userID;
@@ -76,11 +79,13 @@ public class Review {
         this.movieTitle = movieTitle;
     }
 
+    @JsonbTransient
     public void setUser(User user) {
         this.userID = user.getUUID();
         this.username = user.getUsername();
     }
 
+    @JsonbTransient
     public void setMovie(Movie movie) {
         this.movieID = movie.getUUID();
         this.movieTitle = movie.getTitle();
@@ -163,17 +168,23 @@ public class Review {
     public void edit(User user, Movie movie, Rating newRating, String newComment) {
         checkAuthorAndMovie(user, movie);
         checkContent(newRating, newComment);
-        movie.unrate(rating.getValue());
+        // this review may be a copy (e.g. received as JSON): always work on the stored reviews
+        Review storedInMovie = movie.getReview(userID);
+        Review storedInUser = user.getReview(movieID);
+        movie.unrate(storedInMovie.rating.getValue());
         movie.rate(newRating.getValue());
-        this.rating = newRating;
-        this.comment = newComment;
+        for (Review review : List.of(storedInMovie, storedInUser, this)) {
+            review.rating = newRating;
+            review.comment = newComment;
+        }
     }
 
     public void delete(User user, Movie movie) {
         checkAuthorAndMovie(user, movie);
+        Review storedInMovie = movie.getReview(userID);
         user.removeReview(this);
         movie.removeReview(this);
-        movie.unrate(rating.getValue());
+        movie.unrate(storedInMovie.rating.getValue());
     }
 
     @Override
@@ -193,12 +204,19 @@ public class Review {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Review review)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
+        Review review = (Review) o;
+        if (uuid != null || review.uuid != null) {
+            return Objects.equals(uuid, review.uuid);
+        }
         return Objects.equals(uuid, review.uuid) && Objects.equals(getUserID(), review.getUserID()) && Objects.equals(getMovieID(), review.getMovieID()) && getRating() == review.getRating() && Objects.equals(getComment(), review.getComment()) && Objects.equals(getDate(), review.getDate());
     }
 
     @Override
     public int hashCode() {
+        if (uuid != null) {
+            return uuid.hashCode();
+        }
         return Objects.hash(uuid, getUserID(), getMovieID(), getRating(), getComment(), getDate());
     }
 }
