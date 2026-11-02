@@ -1,0 +1,431 @@
+{
+  "info": {
+    "_postman_id": "afd7b9c0-d0d9-46bf-ae0f-7e167c1a6a78",
+    "name": "CineRate - Phase 1 - Users",
+    "description": "Requests of the CineRate web service for the users (CRUD and account checks). Run them in order: the create request saves the new user's ID in the userId variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get all users",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users"
+          ]
+        },
+        "description": ""
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Passwords are never returned\", () => pm.expect(pm.response.text()).to.not.include(\"password\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users"
+          ]
+        },
+        "description": "Creates a user. The ID, the role and the registration date are always set by the service.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Eve\",\n  \"lastName\": \"Durand\",\n  \"email\": \"eve@cinerate.ch\",\n  \"username\": \"eve\",\n  \"password\": \"secret1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "const user = pm.response.json();",
+              "pm.collectionVariables.set(\"userId\", user.UUID);",
+              "pm.test(\"The service created the ID\", () => pm.expect(user.UUID).to.be.a(\"string\"));",
+              "pm.test(\"New users are members\", () => pm.expect(user.role).to.eql(\"member\"));",
+              "pm.test(\"Password is not returned\", () => pm.expect(user.password).to.be.undefined);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get user by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{userId}}"
+          ]
+        },
+        "description": ""
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"It is Eve\", () => pm.expect(pm.response.json().username).to.eql(\"eve\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update user",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{userId}}"
+          ]
+        },
+        "description": "Updates a user without changing its ID or its role. The password is only changed if one is sent.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Eva\",\n  \"lastName\": \"Durand\",\n  \"email\": \"eva@cinerate.ch\",\n  \"username\": \"eva\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Returns true\", () => pm.expect(pm.response.json()).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get updated user",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{userId}}"
+          ]
+        },
+        "description": ""
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "const user = pm.response.json();",
+              "pm.test(\"First name and username were updated\", () => { pm.expect(user.firstName).to.eql(\"Eva\"); pm.expect(user.username).to.eql(\"eva\"); });",
+              "pm.test(\"ID and role did not change\", () => { pm.expect(user.UUID).to.eql(pm.collectionVariables.get(\"userId\")); pm.expect(user.role).to.eql(\"member\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete user",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{userId}}"
+          ]
+        },
+        "description": ""
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Returns true\", () => pm.expect(pm.response.json()).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - get deleted user (404)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{userId}}"
+          ]
+        },
+        "description": ""
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+              "pm.test(\"Error has message and type\", () => { const e = pm.response.json(); pm.expect(e.message).to.be.a(\"string\"); pm.expect(e.type).to.be.a(\"string\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - duplicate username (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Other\",\n  \"lastName\": \"Alice\",\n  \"email\": \"other@cinerate.ch\",\n  \"username\": \"alice\",\n  \"password\": \"secret1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Says the username exists\", () => pm.expect(pm.response.json().message).to.include(\"already exists\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - invalid email (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Zoe\",\n  \"lastName\": \"Petit\",\n  \"email\": \"zoe.cinerate.ch\",\n  \"username\": \"zoe\",\n  \"password\": \"secret1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - password too short (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Zoe\",\n  \"lastName\": \"Petit\",\n  \"email\": \"zoe@cinerate.ch\",\n  \"username\": \"zoe\",\n  \"password\": \"123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error - missing username (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Zoe\",\n  \"lastName\": \"Petit\",\n  \"email\": \"zoe@cinerate.ch\",\n  \"password\": \"secret1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/CineRateService-1.0-SNAPSHOT/api"
+    },
+    {
+      "key": "userId",
+      "value": ""
+    }
+  ]
+}
